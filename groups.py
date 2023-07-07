@@ -1,10 +1,26 @@
 import random
-import torch
 
 VECTOR_LEN = 100
 MODULO = 6840737
 NUM_VARS = 3
 NUM_FREE = 3
+
+
+class Evaluator():
+    def eval_variable(self, id: int):
+        return "v" + str(id)
+
+    def eval_freeterm(self, id: int):
+        return "f" + str(id)
+
+    def eval_identity(self):
+        return "1"
+
+    def eval_inverse(self, arg):
+        return arg + "'"
+
+    def eval_product(self, arg0, arg1):
+        return "(" + arg0 + "," + arg1 + ")"
 
 
 class Term():
@@ -65,9 +81,6 @@ class Term():
 
 
 class Variable(Term):
-    MODEL_CS = [2.0 * torch.rand([VECTOR_LEN], requires_grad=True) - 1.0
-                for _ in range(NUM_VARS)]
-
     def __eq__(self, other):
         return type(other) == Variable and self.id == other.id
 
@@ -87,8 +100,8 @@ class Variable(Term):
         result.add(Product(Identity(), self))
         return result
 
-    def eval(self):
-        return Variable.MODEL_CS[self.id]
+    def eval(self, evaluator: Evaluator):
+        return evaluator.eval_variable(self.id)
 
     def variables(self):
         return set(self.id)
@@ -107,9 +120,6 @@ class Variable(Term):
 
 
 class FreeTerm(Term):
-    MODEL_CS = [2.0 * torch.rand([VECTOR_LEN], requires_grad=True) - 1.0
-                for _ in range(NUM_FREE)]
-
     def __eq__(self, other):
         return type(other) == FreeTerm and self.id == other.id
 
@@ -129,8 +139,8 @@ class FreeTerm(Term):
         result.add(Product(Identity(), self))
         return result
 
-    def eval(self):
-        return FreeTerm.MODEL_CS[self.id]
+    def eval(self, evaluator: Evaluator):
+        return evaluator.eval_freeterm(self.id)
 
     def variables(self):
         return set()
@@ -151,8 +161,6 @@ class FreeTerm(Term):
 
 
 class Identity(Term):
-    MODEL_C = 2.0 * torch.rand([VECTOR_LEN], requires_grad=True) - 1.0
-
     def __eq__(self, other):
         return type(other) == Identity
 
@@ -174,8 +182,8 @@ class Identity(Term):
             result.add(Product(Inverse(f), f))
         return result
 
-    def eval(self):
-        return Identity.MODEL_C
+    def eval(self, evaluator: Evaluator):
+        return evaluator.eval_identity()
 
     def variables(self):
         return set()
@@ -194,11 +202,6 @@ class Identity(Term):
 
 
 class Inverse(Term):
-    MODEL_A = 2.0 * torch.rand([VECTOR_LEN, VECTOR_LEN],
-                               requires_grad=True) - 1.0
-    MODEL_B = 2.0 * torch.rand([VECTOR_LEN],
-                               requires_grad=True) - 1.0
-
     def __eq__(self, other):
         return type(other) == Inverse and self.subterm == other.subterm
 
@@ -225,9 +228,9 @@ class Inverse(Term):
         result.add(Product(Identity(), self))
         return result
 
-    def eval(self):
-        x = self.subterm.eval()
-        return torch.matmul(Inverse.MODEL_A, x) + Inverse.MODEL_B
+    def eval(self, evaluator: Evaluator):
+        x = self.subterm.eval(evaluator)
+        return evaluator.eval_inverse(x)
 
     def variables(self):
         return set(self.subterm.variables())
@@ -258,13 +261,6 @@ class Inverse(Term):
 
 
 class Product(Term):
-    MODEL_A = 2.0 * torch.rand([VECTOR_LEN, VECTOR_LEN],
-                               requires_grad=True) - 1.0
-    MODEL_B = 2.0 * torch.rand([VECTOR_LEN, VECTOR_LEN],
-                               requires_grad=True) - 1.0
-    MODEL_C = 2.0 * torch.rand([VECTOR_LEN],
-                               requires_grad=True) - 1.0
-
     def __eq__(self, other):
         return type(other) == Product and self.left == other.left and self.right == other.right
 
@@ -308,11 +304,10 @@ class Product(Term):
             result.add(self.left)
         return result
 
-    def eval(self):
-        x = self.left.eval()
-        y = self.right.eval()
-        return torch.matmul(Product.MODEL_A, x) + \
-            torch.matmul(Product.MODEL_B, y) + Product.MODEL_C
+    def eval(self, evaluator: Evaluator):
+        x = self.left.eval(evaluator)
+        y = self.right.eval(evaluator)
+        return evaluator.eval_product(x, y)
 
     def variables(self):
         return set(self.left.variables()).union(set(self.right.variables()))
@@ -350,4 +345,8 @@ class Product(Term):
 
 
 if __name__ == '__main__':
-    print(Term.random_walk(5, 6))
+    walk = Term.random_walk(5, 6)
+    print(walk)
+    term = walk[0]
+    evaluator = Evaluator()
+    print(term.eval(evaluator))
