@@ -157,6 +157,8 @@ def training(term_length=5, walk_length=3):
         loss.backward()
         optimizer.step()
 
+    return full_model
+
 
 if __name__ == '__main__':
     training()
