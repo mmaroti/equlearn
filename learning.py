@@ -136,26 +136,33 @@ def prepare_input(start: Term, next: Term, finish: Term, evaluator: Evaluator):
     return input_data, next_idx
 
 
-def training(term_length=5, walk_length=3):
+def training(term_length=5, walk_length=3, num_steps=10000):
     assert walk_length >= 2
     full_model = FullModel()
     optimizer = torch.optim.Adam(full_model.parameters(), lr=1e-4)
 
     avg = 0.0
-    for step in range(10000):
+    for step in range(num_steps):
         walk = Term.random_walk(term_length, walk_length)
         input_data, next_idx = prepare_input(
             walk[0], walk[1], walk[-1], full_model)
         output_data = full_model.predictor(input_data)
         loss = 1.0 - output_data[next_idx]
 
-        avg = 0.9 * avg + 0.1 * loss.item()
-        if step % 100 == 0:
-            print(step, avg, loss.item())
-
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
+        avg = 0.9 * avg + 0.1 * loss.item()
+        if step % 100 == 0:
+            print(step, avg, loss.item())
+            if loss >=0.9:
+                print("start: ", walk[0])
+                print("end: ", walk[-1])
+                start_neighbors = list(walk[0].all_neighbors())
+                for i in range(5):
+                    print(start_neighbors[torch.sort(output_data, descending = True)[1][i].item()], torch.sort(output_data, descending = True)[0][i].item())
+
 
     return full_model
 

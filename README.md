@@ -4,12 +4,11 @@
 
 # to do:
 # Nagy hibaknal irjuk ki az 5 legvaloszinubb lepest,
-# es a probabilityt-, az elejet meg a veget
+# es a probabilityt-, az elejet meg a veget (kesz)
 
+# learning-ben legyen a step(szama) is parameter (kesz)
 
-# learning-ben legyen a step(szama) is parameter
-
-# alfago alfachess utnanaolvasni
+# alfago alfachess utnanaolvasni (folyamatban)
 
 # fuggveny(fullmodel, star, end, max_depth, num_trials)
 # modell segitsegevel eljutni start-bol az end-be
