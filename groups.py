@@ -1,3 +1,4 @@
+from typing import Set, List
 import random
 
 VECTOR_LEN = 100
@@ -7,27 +8,27 @@ NUM_FREE = 3
 
 
 class Evaluator():
-    def eval_variable(self, id: int):
+    def eval_variable(self, id: int) -> str:
         return "v" + str(id)
 
-    def eval_freeterm(self, id: int):
+    def eval_freeterm(self, id: int) -> str:
         return "f" + str(id)
 
-    def eval_identity(self):
+    def eval_identity(self) -> str:
         return "1"
 
-    def eval_inverse(self, arg):
+    def eval_inverse(self, arg) -> str:
         return arg + "'"
 
-    def eval_product(self, arg0, arg1):
+    def eval_product(self, arg0, arg1) -> str:
         return "(" + arg0 + "," + arg1 + ")"
 
 
 class Term():
-    def all_neighbors(self):
-        return self.eq_neighbors().union(self.sub_neighbors())
+    def all_neighbors(self) -> List['Term']:
+        return list(self.eq_neighbors().union(self.sub_neighbors()))
 
-    def sub_neighbors(self):
+    def sub_neighbors(self) -> Set['Term']:
         result = set()
         for i in self.freeterms():
             result.add(self.subst(i, Identity()))
@@ -39,7 +40,7 @@ class Term():
         return result
 
     @staticmethod
-    def random_term(length):
+    def random_term(length) -> 'Term':
         term = ''
         if length > 0:
             next = random.randint(0, 1)
@@ -59,7 +60,7 @@ class Term():
         return term
 
     @staticmethod
-    def random_walk(term_length, walk_length):
+    def random_walk(term_length, walk_length) -> List['Term']:
         while True:
             next = Term.random_term(term_length)
             if not next.freeterms():
@@ -67,7 +68,7 @@ class Term():
         terms = [next]
 
         while len(terms) < walk_length:
-            nexts = list(terms[-1].all_neighbors())
+            nexts = terms[-1].all_neighbors()
             next = None
             for _ in range(1 if len(terms) < walk_length//2 else 20):
                 while True:
@@ -94,7 +95,7 @@ class Variable(Term):
     def __repr__(self):
         return "xyzuvwpqrstabcdefghijklmno"[self.id]
 
-    def eq_neighbors(self):
+    def eq_neighbors(self) -> Set[Term]:
         result = set()
         result.add(Product(self, Identity()))
         result.add(Product(Identity(), self))
@@ -103,7 +104,7 @@ class Variable(Term):
     def eval(self, evaluator: Evaluator):
         return evaluator.eval_variable(self.id)
 
-    def variables(self):
+    def variables(self) -> Set[int]:
         return set(self.id)
 
     def freeterms(self):
@@ -133,7 +134,7 @@ class FreeTerm(Term):
     def __repr__(self):
         return chr(ord("A") + self.id)
 
-    def eq_neighbors(self):
+    def eq_neighbors(self) -> Set[Term]:
         result = set()
         result.add(Product(self, Identity()))
         result.add(Product(Identity(), self))
@@ -142,7 +143,7 @@ class FreeTerm(Term):
     def eval(self, evaluator: Evaluator):
         return evaluator.eval_freeterm(self.id)
 
-    def variables(self):
+    def variables(self) -> Set[int]:
         return set()
 
     def freeterms(self):
@@ -173,7 +174,7 @@ class Identity(Term):
     def __repr__(self):
         return "1"
 
-    def eq_neighbors(self):
+    def eq_neighbors(self) -> Set[Term]:
         result = set()
         result.add(Product(self, self))
         for id in range(NUM_FREE):
@@ -185,7 +186,7 @@ class Identity(Term):
     def eval(self, evaluator: Evaluator):
         return evaluator.eval_identity()
 
-    def variables(self):
+    def variables(self) -> Set[int]:
         return set()
 
     def freeterms(self):
@@ -220,7 +221,7 @@ class Inverse(Term):
         else:
             return "(" + str(self.subterm) + ")\'"
 
-    def eq_neighbors(self):
+    def eq_neighbors(self) -> Set[Term]:
         result = set()
         for n in self.subterm.eq_neighbors():
             result.add(Inverse(n))
@@ -232,7 +233,7 @@ class Inverse(Term):
         x = self.subterm.eval(evaluator)
         return evaluator.eval_inverse(x)
 
-    def variables(self):
+    def variables(self) -> Set[int]:
         return set(self.subterm.variables())
 
     def freeterms(self):
@@ -280,7 +281,7 @@ class Product(Term):
             right = "(" + right + ")"
         return left + "*" + right
 
-    def eq_neighbors(self):
+    def eq_neighbors(self) -> Set[Term]:
         result = set()
         for n in self.left.eq_neighbors():
             result.add(Product(n, self.right))
@@ -309,7 +310,7 @@ class Product(Term):
         y = self.right.eval(evaluator)
         return evaluator.eval_product(x, y)
 
-    def variables(self):
+    def variables(self) -> Set[int]:
         return set(self.left.variables()).union(set(self.right.variables()))
 
     def freeterms(self):
