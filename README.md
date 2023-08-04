@@ -18,3 +18,7 @@
 # (1-lepeses) modell lementese fajbla
 # ezt a modellt beolvasni/betolteni
 # adni neki tesztekett(valos problemakat)
+
+# TODO:
+* Annotate the return types everywhere
+* Next item

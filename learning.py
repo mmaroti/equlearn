@@ -1,3 +1,4 @@
+from typing import List
 import torch
 
 from groups import Term, VECTOR_LEN, NUM_VARS, NUM_FREE, Evaluator, Product, Inverse, Identity, Variable
@@ -57,8 +58,10 @@ class Predictor(torch.nn.Module):
         return y
 
 
-class FullModel(Evaluator):
+class FullModel(torch.nn.Module):
     def __init__(self):
+        super().__init__()
+
         self.variables = [ConstantModel() for _ in range(NUM_VARS)]
         self.freeterms = [ConstantModel() for _ in range(NUM_FREE)]
         self.identity = ConstantModel()
@@ -94,12 +97,12 @@ class FullModel(Evaluator):
         return params
 
 
-def prepare_input(start: Term, next: Term, finish: Term, evaluator: Evaluator):
+def prepare_input(start: Term, finish: Term, evaluator: Evaluator):
     """
     Takes the start and finish terms, walks through all neighbors
     of start, and for each (start, neighbor, finish) tuple we calculate
     their vectorial embedding using eval and pack them into a matrix.
-    The output shape is [NUM_NEIGHBORS, 3 * VECTOR_LEN]. It also 
+    The output shape is [NUM_NEIGHBORS, 3 * VECTOR_LEN]. It also
     returns the matching neighbor index of the next term.
     """
 
@@ -111,14 +114,11 @@ def prepare_input(start: Term, next: Term, finish: Term, evaluator: Evaluator):
     # print(start_vec.shape)
     # print(finish_vec.shape)
 
-    next_idx = None
     neighbors = start.all_neighbors()
     neighbors_vecs = torch.empty(
         size=(len(neighbors), VECTOR_LEN), dtype=start_vec.dtype)
     for idx, neighbor in enumerate(neighbors):
         neighbors_vecs[idx] = neighbor.eval(evaluator)
-        if next == neighbor:
-            next_idx = idx
 
     # print(neighbors_vecs.shape)
 
@@ -133,10 +133,10 @@ def prepare_input(start: Term, next: Term, finish: Term, evaluator: Evaluator):
     input_data = input_data.reshape([len(neighbors), -1])
     # print(input_data.shape)
 
-    return input_data, next_idx
+    return input_data, neighbors
 
 
-def training(term_length=5, walk_length=3, num_steps=100):
+def training(term_length=5, walk_length=3, num_steps=10000):
     assert walk_length >= 2
     full_model = FullModel()
     optimizer = torch.optim.Adam(full_model.parameters(), lr=1e-4)
@@ -144,8 +144,19 @@ def training(term_length=5, walk_length=3, num_steps=100):
     avg = 0.0
     for step in range(num_steps):
         walk = Term.random_walk(term_length, walk_length)
-        input_data, next_idx = prepare_input(
-            walk[0], walk[1], walk[-1], full_model)
+
+        # full_model.eval()
+        proposed_walk = monte_carlo_search(
+            full_model, walk[0], walk[-1], walk_length, 10)
+        if proposed_walk:
+            print(walk)
+            print(proposed_walk)
+            continue
+
+        # full_model.train()
+        input_data, neighbors = prepare_input(
+            walk[0], walk[-1], full_model)
+        next_idx = neighbors.index(walk[1])
         output_data = full_model.predictor(input_data)
         loss = 1.0 - output_data[next_idx]
 
@@ -156,37 +167,41 @@ def training(term_length=5, walk_length=3, num_steps=100):
         avg = 0.9 * avg + 0.1 * loss.item()
         if step % 100 == 0:
             print(step, avg, loss.item())
-            if loss >=0.9:
-                print("start: ", walk[0])
-                print("end: ", walk[-1])
-                start_neighbors = list(walk[0].all_neighbors())
-                for i in range(5):
-                    print(start_neighbors[torch.sort(output_data, descending = True)[1][i].item()], torch.sort(output_data, descending = True)[0][i].item())
+            if loss >= 0.9:
+                print("start: ", walk[0], "next: ", walk[1], "end: ", walk[-1])
+                sorted = torch.sort(output_data, descending=True)
+                for i in range(min(10, len(neighbors))):
+                    print(neighbors[sorted.indices[i].item()],
+                          sorted.values[i].item())
 
     return full_model
 
 
-path = [0, 1, 2]
-path.clear()
-def reachending(fullmodel: FullModel, start: Term, end: Term, max_depth: int, num_trials: int):
-    input_data, next_idx = prepare_input(
-    start, start, end, fullmodel)
-    output_data = fullmodel.predictor(input_data)
-    output_tensor = ([output_data.tolist(), list(start.all_neighbors())])
-    if max_depth > 0 and num_trials > 0:
-        if path == [] or path != [start]:
-            path.append(start)
-        reachending(fullmodel, output_tensor[1][torch.multinomial(output_data, 1, replacement=False).item()], end, max_depth-1, num_trials)
-        if start == end:
-            return path
-        path.pop()
-        print(path)
-    if num_trials > 0 and len(path)==1:
-        print(num_trials)
-        reachending(fullmodel, start, end, max_depth, num_trials-1)
-    else:
-        return None
+def monte_carlo_search(full_model: FullModel, start: Term, end: Term, max_depth: int, num_trials: int) -> List[Term]:
+    for _ in range(num_trials):
+        # print("************")
+        term = start
+        path = []
+        for _ in range(max_depth):
+            path.append(term)
+            if term == end:
+                return path
+
+            input_data, neighbors = prepare_input(term, end, full_model)
+            output_data = full_model.predictor(input_data)
+            next_idx = torch.multinomial(output_data, 1).item()
+            # print(output_data)
+            # print(next_idx)
+            term = neighbors[next_idx]
+    return None
+
 
 if __name__ == '__main__':
-    fm = training()
-    print(reachending(fm, Product(Variable(0), Inverse(Variable(0))), Identity(), 8, 100))
+    full_model = training(num_steps=100)
+
+    path = monte_carlo_search(full_model,
+                              Product(Variable(0), Inverse(Variable(0))),
+                              Identity(),
+                              4,
+                              100)
+    print(path)
