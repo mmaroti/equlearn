@@ -8,9 +8,9 @@
 
 # learning-ben legyen a step(szama) is parameter (kesz)
 
-# alfago alfachess utnanaolvasni (folyamatban)
+# alfago alfachess utnanaolvasni (kesz)
 
-# fuggveny(fullmodel, star, end, max_depth, num_trials)
+# fuggveny(fullmodel, start, end, max_depth, num_trials)
 # modell segitsegevel eljutni start-bol az end-be
 # monte carlo modell
 # visszater egy listaval ha eljutott, vagy None-al

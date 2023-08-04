@@ -1,6 +1,6 @@
 import torch
 
-from groups import Term, VECTOR_LEN, NUM_VARS, NUM_FREE, Evaluator
+from groups import Term, VECTOR_LEN, NUM_VARS, NUM_FREE, Evaluator, Product, Inverse, Identity, Variable
 
 
 class ConstantModel(torch.nn.Module):
@@ -136,7 +136,7 @@ def prepare_input(start: Term, next: Term, finish: Term, evaluator: Evaluator):
     return input_data, next_idx
 
 
-def training(term_length=5, walk_length=3, num_steps=10000):
+def training(term_length=5, walk_length=3, num_steps=100):
     assert walk_length >= 2
     full_model = FullModel()
     optimizer = torch.optim.Adam(full_model.parameters(), lr=1e-4)
@@ -163,9 +163,30 @@ def training(term_length=5, walk_length=3, num_steps=10000):
                 for i in range(5):
                     print(start_neighbors[torch.sort(output_data, descending = True)[1][i].item()], torch.sort(output_data, descending = True)[0][i].item())
 
-
     return full_model
 
 
+path = [0, 1, 2]
+path.clear()
+def reachending(fullmodel: FullModel, start: Term, end: Term, max_depth: int, num_trials: int):
+    input_data, next_idx = prepare_input(
+    start, start, end, fullmodel)
+    output_data = fullmodel.predictor(input_data)
+    output_tensor = ([output_data.tolist(), list(start.all_neighbors())])
+    if max_depth > 0 and num_trials > 0:
+        if path == [] or path != [start]:
+            path.append(start)
+        reachending(fullmodel, output_tensor[1][torch.multinomial(output_data, 1, replacement=False).item()], end, max_depth-1, num_trials)
+        if start == end:
+            return path
+        path.pop()
+        print(path)
+    if num_trials > 0 and len(path)==1:
+        print(num_trials)
+        reachending(fullmodel, start, end, max_depth, num_trials-1)
+    else:
+        return None
+
 if __name__ == '__main__':
-    training()
+    fm = training()
+    print(reachending(fm, Product(Variable(0), Inverse(Variable(0))), Identity(), 8, 100))
