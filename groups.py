@@ -107,16 +107,16 @@ class Variable(Term):
     def variables(self) -> Set[int]:
         return set(self.id)
 
-    def freeterms(self):
+    def freeterms(self) -> Set[str]:
         return set()
 
-    def length(self):
+    def length(self)  -> int:
         return 1
 
-    def simplify(self):
+    def simplify(self) -> Term:
         return self
 
-    def subst(self, id, term):
+    def subst(self, id, term) -> Term:
         return self
 
 
@@ -146,13 +146,13 @@ class FreeTerm(Term):
     def variables(self) -> Set[int]:
         return set()
 
-    def freeterms(self):
+    def freeterms(self) -> Set[int]:
         return set([self.id])
 
-    def length(self):
+    def length(self) -> int:
         return 1
 
-    def simplify(self):
+    def simplify(self) -> Term:
         return self
 
     def subst(self, id: int, term: Term) -> Term:
@@ -189,16 +189,16 @@ class Identity(Term):
     def variables(self) -> Set[int]:
         return set()
 
-    def freeterms(self):
+    def freeterms(self) -> Set[int]:
         return set()
 
-    def length(self):
+    def length(self) -> int:
         return 1
 
-    def simplify(self):
+    def simplify(self) -> Term:
         return self
 
-    def subst(self, id, term):
+    def subst(self, id, term) -> Term:
         return self
 
 
@@ -236,13 +236,13 @@ class Inverse(Term):
     def variables(self) -> Set[int]:
         return set(self.subterm.variables())
 
-    def freeterms(self):
+    def freeterms(self) -> Set[int]:
         return set(self.subterm.freeterms())
 
-    def length(self):
+    def length(self) -> int:
         return self.subterm.length() + 1
 
-    def simplify(self):
+    def simplify(self) -> Term:
         subterm = self.subterm.simplify()
         if type(subterm) == Identity:
             return subterm
@@ -257,7 +257,7 @@ class Inverse(Term):
         else:
             raise ValueError()
 
-    def subst(self, id, term):
+    def subst(self, id, term) -> Term:
         return Inverse(self.subterm.subst(id, term))
 
 
@@ -313,13 +313,13 @@ class Product(Term):
     def variables(self) -> Set[int]:
         return set(self.left.variables()).union(set(self.right.variables()))
 
-    def freeterms(self):
+    def freeterms(self) -> Set[int]:
         return set(self.left.freeterms()).union(set(self.right.freeterms()))
 
-    def length(self):
+    def length(self) -> int:
         return self.left.length() + 1 + self.right.length()
 
-    def simplify(self):
+    def simplify(self) ->Term:
         left = self.left.simplify()
         right = self.right.simplify()
         if type(left) == Identity:
@@ -341,7 +341,7 @@ class Product(Term):
         else:
             return Product(left, right)
 
-    def subst(self, id, term):
+    def subst(self, id, term) -> Term:
         return Product(self.left.subst(id, term), self.right.subst(id, term))
 
 

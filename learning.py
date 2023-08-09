@@ -1,4 +1,4 @@
-from typing import List
+from typing import Set, List
 import torch
 
 from groups import Term, VECTOR_LEN, NUM_VARS, NUM_FREE, Evaluator, Product, Inverse, Identity, Variable
@@ -10,7 +10,7 @@ class ConstantModel(torch.nn.Module):
 
         self.vector = torch.nn.Parameter(2.0 * torch.rand([VECTOR_LEN]) - 1.0)
 
-    def forward(self):
+    def forward(self) -> torch.Tensor:
         return self.vector
 
 
@@ -20,7 +20,7 @@ class UnaryModel(torch.nn.Module):
 
         self.lin1 = torch.nn.Linear(VECTOR_LEN, VECTOR_LEN)
 
-    def forward(self, x):
+    def forward(self, x) -> torch.Tensor:
         y = self.lin1(x)
         return y
 
@@ -32,7 +32,7 @@ class BinaryModel(torch.nn.Module):
         self.lin1 = torch.nn.Linear(VECTOR_LEN, VECTOR_LEN)
         self.lin2 = torch.nn.Linear(VECTOR_LEN, VECTOR_LEN)
 
-    def forward(self, x, y):
+    def forward(self, x, y) -> torch.Tensor:
         z = self.lin1(x) + self.lin2(y)
         return z
 
@@ -49,7 +49,7 @@ class Predictor(torch.nn.Module):
         self.lin1 = torch.nn.Linear(3 * VECTOR_LEN, 100)
         self.lin2 = torch.nn.Linear(100, 1)
 
-    def forward(self, x):
+    def forward(self, x) -> torch.Tensor:
         y = self.lin1(x)
         y = torch.relu(y)
         y = self.lin2(y)
@@ -84,7 +84,7 @@ class FullModel(torch.nn.Module):
     def eval_product(self, arg0, arg1):
         return self.product(arg0, arg1)
 
-    def parameters(self):
+    def parameters(self) -> List[torch.Tensor]:
         params = list()
         for var in self.variables:
             params.extend(var.parameters())
@@ -97,7 +97,7 @@ class FullModel(torch.nn.Module):
         return params
 
 
-def prepare_input(start: Term, finish: Term, evaluator: Evaluator):
+def prepare_input(start: Term, finish: Term, evaluator: Evaluator) -> torch.Tensor(3*VECTOR_LEN): #!!
     """
     Takes the start and finish terms, walks through all neighbors
     of start, and for each (start, neighbor, finish) tuple we calculate
@@ -131,12 +131,12 @@ def prepare_input(start: Term, finish: Term, evaluator: Evaluator):
     input_data = torch.stack([start_vecs, neighbors_vecs, finish_vecs], dim=-1)
     # print(input_data.shape)
     input_data = input_data.reshape([len(neighbors), -1])
-    # print(input_data.shape)
+    #print(input_data.shape)
 
     return input_data, neighbors
 
 
-def training(term_length=5, walk_length=3, num_steps=10000):
+def training(term_length=5, walk_length=3, num_steps=10000) -> FullModel:
     assert walk_length >= 2
     full_model = FullModel()
     optimizer = torch.optim.Adam(full_model.parameters(), lr=1e-4)
@@ -177,7 +177,7 @@ def training(term_length=5, walk_length=3, num_steps=10000):
     return full_model
 
 
-def monte_carlo_search(full_model: FullModel, start: Term, end: Term, max_depth: int, num_trials: int) -> List[Term]:
+def monte_carlo_search(full_model: FullModel, start: Term, end: Term, max_depth: int, num_trials: int) -> List[Term] or None:
     for _ in range(num_trials):
         # print("************")
         term = start
