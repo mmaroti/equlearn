@@ -80,6 +80,13 @@ class Term():
             terms.append(next)
         return terms
 
+    def serialize(self) -> str:
+        pass
+
+    @staticmethod
+    def deserialize(serialized: str) -> 'Term':
+        pass
+
 
 class Variable(Term):
     def __eq__(self, other):
@@ -110,7 +117,7 @@ class Variable(Term):
     def freeterms(self) -> Set[str]:
         return set()
 
-    def length(self)  -> int:
+    def length(self) -> int:
         return 1
 
     def simplify(self) -> Term:
@@ -319,7 +326,7 @@ class Product(Term):
     def length(self) -> int:
         return self.left.length() + 1 + self.right.length()
 
-    def simplify(self) ->Term:
+    def simplify(self) -> Term:
         left = self.left.simplify()
         right = self.right.simplify()
         if type(left) == Identity:
