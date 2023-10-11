@@ -87,6 +87,8 @@ class Term():
     def deserialize(serialized: str) -> 'Term':
         pass
 
+    def polishwrite(self):
+        pass
 
 class Variable(Term):
     def __eq__(self, other):
@@ -126,6 +128,8 @@ class Variable(Term):
     def subst(self, id, term) -> Term:
         return self
 
+    def polishwrite(self):
+        return "xyzuvwpqrstabcdefghijklmno"[self.id]
 
 class FreeTerm(Term):
     def __eq__(self, other):
@@ -167,6 +171,8 @@ class FreeTerm(Term):
             return term
         return self
 
+    def polishwrite(self):
+        return chr(ord("A") + self.id)
 
 class Identity(Term):
     def __eq__(self, other):
@@ -208,6 +214,8 @@ class Identity(Term):
     def subst(self, id, term) -> Term:
         return self
 
+    def polishwrite(self):
+        return "1"
 
 class Inverse(Term):
     def __eq__(self, other):
@@ -267,6 +275,8 @@ class Inverse(Term):
     def subst(self, id, term) -> Term:
         return Inverse(self.subterm.subst(id, term))
 
+    def polishwrite(self):
+        return "-" + self.subterm.polishwrite()
 
 class Product(Term):
     def __eq__(self, other):
@@ -351,6 +361,8 @@ class Product(Term):
     def subst(self, id, term) -> Term:
         return Product(self.left.subst(id, term), self.right.subst(id, term))
 
+    def polishwrite(self):
+        return "*" + self.left.polishwrite() + self.right.polishwrite()
 
 if __name__ == '__main__':
     walk = Term.random_walk(5, 6)
@@ -358,3 +370,5 @@ if __name__ == '__main__':
     term = walk[0]
     evaluator = Evaluator()
     print(term.eval(evaluator))
+    print(Product(Product(Inverse(Product(Inverse(Inverse(Variable(0))), Variable(1))), Inverse(FreeTerm(0))), Identity()))
+    print(Product(Product(Inverse(Product(Inverse(Inverse(Variable(0))), Variable(1))), Inverse(FreeTerm(0))), Identity()).polishwrite())

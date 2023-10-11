@@ -1,7 +1,7 @@
 from typing import Set, List, Optional
 import torch
 
-from groups import Term, VECTOR_LEN, NUM_VARS, NUM_FREE, Evaluator, Product, Inverse, Identity, Variable
+from groups import Term, VECTOR_LEN, NUM_VARS, NUM_FREE, Evaluator, Product, Inverse, Identity, Variable, FreeTerm
 
 
 class ConstantModel(torch.nn.Module):
@@ -188,7 +188,7 @@ def training(term_length=5, walk_length=3, num_steps=10000) -> FullModel:
 
 
 def monte_carlo_search(full_model: FullModel, start: Term, end: Term, max_depth: int, num_trials: int) -> Optional[List[Term]]:
-    print(max_depth, num_trials)
+    #print(max_depth, num_trials)
     for _ in range(num_trials):
         term = start
         path = []
@@ -261,6 +261,20 @@ def training_data2(full_model: FullModel, term_length=5, walk_length=3, num_tria
             "end": walk[-1],
         }
 
+def polishread(text):
+    for ch in text:
+        if ch == "*":
+            return Product(polishread(text.split("*", 1)[0]),text.split("*", 1)[1])
+        elif ch == "-":
+            return Inverse(polishread(text.split("-",1)[1]))
+        elif ch in "xyzuvwpqrstabcdefghijklmno":
+            return Variable("xyzuvwpqrstabcdefghijklmno".find(ch))
+        elif ch in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+            return FreeTerm(chr(ord("A") + "ABCDEFGHIJKLMNOPQRSTUVWXYZ".find(ch)))
+        elif ch == "1":
+            return Identity()
+        else:
+            pass
 
 if __name__ == '__main__':
     if False:
@@ -269,9 +283,11 @@ if __name__ == '__main__':
         simple_training(full_model, training_data1, num_steps=1000)
         # full_model.save("model1.pt")
 
-    full_model = FullModel.load("model1.pt")
-    full_model.eval()
-    for step, data in enumerate(training_data2(full_model)):
-        print(data)
-        if step >= 10:
-            break
+#    full_model = FullModel.load("model1.pt")
+#    full_model.eval()
+#    for step, data in enumerate(training_data2(full_model)):
+#        print(data)
+#        if step >= 10:
+#            break
+
+    print(polishread("**-*--xy-A1"))
