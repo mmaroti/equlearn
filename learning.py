@@ -1,7 +1,7 @@
 from typing import Set, List, Optional
 import torch
 
-from groups import Term, VECTOR_LEN, NUM_VARS, NUM_FREE, Evaluator, Product, Inverse, Identity, Variable, FreeTerm
+from groups import *
 
 
 class ConstantModel(torch.nn.Module):
@@ -255,39 +255,53 @@ def training_data2(full_model: FullModel, term_length=5, walk_length=3, num_tria
                 full_model, start=neighbor, end=walk[-1], max_depth=walk_length-1, num_trials=num_trials)
             if result is not None:
                 next.add(neighbor)
-        yield {
-            "start": walk[0],
-            "next": list(next),
-            "end": walk[-1],
-        }
+        paths = open("paths.txt", "a")
+        paths.write(walk[0].polishwrite() + "\n")
+        for term in next:
+            paths.write(term.polishwrite() + " ")
+        paths.write("\n" + walk[-1].polishwrite()  + "\n \n")
+
+        # yield {                           // ezt nem tudom kiiratni...
+        #     "start": walk[0],
+        #     "next":  list(next),
+        #     "end": walk[-1],
+        # }
 
 def polishread(text):
-    for ch in text:
-        if ch == "*":
-            return Product(polishread(text.split("*", 1)[0]),text.split("*", 1)[1])
-        elif ch == "-":
-            return Inverse(polishread(text.split("-",1)[1]))
+    mylist = []
+    for ch in reversed(text):
+        if ch == "1":
+            mylist.append(Identity())
         elif ch in "xyzuvwpqrstabcdefghijklmno":
-            return Variable("xyzuvwpqrstabcdefghijklmno".find(ch))
+            mylist.append(Variable("xyzuvwpqrstabcdefghijklmno".find(ch)))
         elif ch in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
-            return FreeTerm(chr(ord("A") + "ABCDEFGHIJKLMNOPQRSTUVWXYZ".find(ch)))
-        elif ch == "1":
-            return Identity()
-        else:
-            pass
+            mylist.append(FreeTerm("ABCDEFGHIJKLMNOPQRSTUVWXYZ".find(ch)))
+        elif ch == "-":
+            mylist[-1] = Inverse(mylist[-1])
+        elif ch == "*":
+            mylist[-2] = Product(mylist[-1], mylist[-2])
+            del(mylist[-1])
+    return mylist[0]
+
 
 if __name__ == '__main__':
+    testterm = Product(Product(Inverse(Product(Inverse(Inverse(Variable(0))), Variable(1))), Inverse(FreeTerm(0))), Identity())
+    print("**-*--xy-A1", testterm)
+    print(testterm.polishwrite(), polishread(testterm.polishwrite()))
+    print(polishread("******xyyzyzy"))
+    print("**-*--B1*--B-AA", polishread("**-*--B1*--B-AA"))
+
+    open('paths.txt', 'w').close()
+
     if False:
-        # full_model = FullModel()
+        full_model = FullModel()
         full_model = FullModel.load("model1.pt")
         simple_training(full_model, training_data1, num_steps=1000)
-        # full_model.save("model1.pt")
+        full_model.save("model1.pt")
 
-#    full_model = FullModel.load("model1.pt")
-#    full_model.eval()
-#    for step, data in enumerate(training_data2(full_model)):
-#        print(data)
-#        if step >= 10:
-#            break
-
-    print(polishread("**-*--xy-A1"))
+    full_model = FullModel.load("model1.pt")
+    full_model.eval()
+    for step, data in enumerate(training_data2(full_model)):
+        print(data)
+        if step >= 10:
+            break

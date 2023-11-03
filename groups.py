@@ -369,6 +369,8 @@ if __name__ == '__main__':
     print(walk)
     term = walk[0]
     evaluator = Evaluator()
-    print(term.eval(evaluator))
+#    print(term.eval(evaluator))
     print(Product(Product(Inverse(Product(Inverse(Inverse(Variable(0))), Variable(1))), Inverse(FreeTerm(0))), Identity()))
     print(Product(Product(Inverse(Product(Inverse(Inverse(Variable(0))), Variable(1))), Inverse(FreeTerm(0))), Identity()).polishwrite())
+    print(Product(Product(Inverse(Product(Inverse(Inverse(FreeTerm(1))),Identity())),Product(Inverse(Inverse(FreeTerm(1))), Inverse(FreeTerm(0)))),FreeTerm(0)))
+    print(Product(Product(Inverse(Product(Inverse(Inverse(FreeTerm(1))),Identity())),Product(Inverse(Inverse(FreeTerm(1))), Inverse(FreeTerm(0)))),FreeTerm(0)).polishwrite())
